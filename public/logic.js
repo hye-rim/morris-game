@@ -5,7 +5,8 @@
 const LOGIC_MORRIS = (() => {
   const N = 24, START = 9;
   const HARD_SLIP = 0.2;             // 어려움도 다섯 번에 한 번쯤은 쉬움처럼 둔다 (사람이 이길 수 있게)
-  const DEPTH = { easy: 1, hard: 4 };
+  const NORMAL_SLIP = 0.25;          // 보통은 두 수 앞을 보되 네 번에 한 번쯤 쉬움처럼 둔다
+  const DEPTH = { easy: 1, normal: 2, hard: 4 };
   const MAX_PLIES = 300;             // 끝없이 도는 판을 막는 안전장치 (무승부)
   const QUIET_LIMIT = 60;            // 말을 놓거나 떼는 일 없이 이만큼 지나면 무승부
 
@@ -148,18 +149,18 @@ const LOGIC_MORRIS = (() => {
     const acts = legalActions(g);
     if (!acts.length) return null;
     if (acts.length === 1) return acts[0];
-    if (level !== 'hard' || rng() < HARD_SLIP) return easyPick(g, rng);
+    if (level === 'easy' || rng() < (level === 'hard' ? HARD_SLIP : NORMAL_SLIP)) return easyPick(g, rng);
     const me = g.turn;
     let best = acts[0], bestV = -Infinity;
     for (const a of ordered(g)) {
       const c = clone(g);
       apply(c, a);
-      const v = search(c, DEPTH.hard - 1, -Infinity, Infinity, me);
+      const v = search(c, DEPTH[level] - 1, -Infinity, Infinity, me);
       if (v > bestV) { bestV = v; best = a; }
     }
     return best;
   }
 
-  return { N, START, HARD_SLIP, DEPTH, MAX_PLIES, QUIET_LIMIT, ADJ, MILLS, newGame, clone, onBoard, total, canFly, millAt, inMill, removable, movesOf, legalActions, apply, aiPick };
+  return { N, START, HARD_SLIP, NORMAL_SLIP, DEPTH, MAX_PLIES, QUIET_LIMIT, ADJ, MILLS, newGame, clone, onBoard, total, canFly, millAt, inMill, removable, movesOf, legalActions, apply, aiPick };
 })();
 if (typeof module !== 'undefined') module.exports = LOGIC_MORRIS;

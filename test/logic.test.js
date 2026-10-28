@@ -195,7 +195,7 @@ test('random games always end, only legal actions apply, and pieces are conserve
 
 test('computer returns only legal actions', () => {
   const rng = seeded(8);
-  for (const level of ['easy', 'hard']) {
+  for (const level of ['easy', 'normal', 'hard']) {
     for (let k = 0; k < 12; k++) {
       const g = L.newGame();
       for (let i = 0; i < Math.floor(rng() * 30) && !g.over; i++) { const acts = L.legalActions(g); L.apply(g, acts[Math.floor(rng() * acts.length)]); }

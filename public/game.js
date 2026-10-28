@@ -63,7 +63,7 @@ $('muteBtn').onclick = (e) => { e.currentTarget.blur(); toggleMute(); };
 $('muteBtn').textContent = muted ? '🔇' : '🔊';
 
 // ---------- 상태 ----------
-let mode = 'easy';                  // 'easy' · 'hard' (컴퓨터) · 'online'
+let mode = 'easy';                  // 'easy' · 'normal' · 'hard' (컴퓨터) · 'online'
 let phase = 'title';                // title · play · over
 let st = null;                      // 컴퓨터 대전 판
 let cpuYou = 0;                     // 컴퓨터 대전에서 내 자리 (0 노랑·먼저, 1 분홍). 다시 하면 서로 바뀐다
@@ -256,7 +256,7 @@ function startCpu(level, you = 0) {
 function scheduleCpu() { thinking = true; render(); cpuTimer = setTimeout(cpuTurn, T.cpu); }
 function cpuTurn() {
   if (phase !== 'play' || !st || online() || st.over || st.turn === cpuYou) { thinking = false; render(); return; }
-  const a = L.aiPick(st, mode === 'hard' ? 'hard' : 'easy');
+  const a = L.aiPick(st, mode === 'hard' || mode === 'normal' ? mode : 'easy');
   const ev = a && L.apply(st, a);
   thinking = false;
   if (!ev) { render(); return; }
@@ -288,7 +288,7 @@ function showTitle() {
     <h1>아홉 말 모리스</h1>
     <p>세 점을 <b>한 줄</b>로 만들어 상대 말을 뺏어요!</p>
     <div class="card2" style="font-size:13px">① 말 아홉 개를 번갈아 <b>놓아요</b><br>② 다 놓으면 선을 따라 <b>한 칸씩 움직여요</b><br>세 점이 한 줄(밀)이면 상대 말 하나를 <b>뺏어요</b><br>말이 <b>세 개</b>가 되면 아무 데로나 <b>날 수</b> 있고, 두 개가 되거나 갇히면 져요</div>
-    <div class="col"><button data-act="cpu" data-lv="easy">🤖 컴퓨터랑 · 쉬움</button><button class="sub" data-act="cpu" data-lv="hard">🤖 컴퓨터랑 · 어려움</button><button class="sub" data-act="online">🌐 온라인 대전${on.w || on.l ? ` · ${on.w || 0}승 ${on.l || 0}패` : ''}</button></div>`);
+    <div class="col"><button data-act="cpu" data-lv="easy">🤖 컴퓨터랑 · 쉬움</button><button class="sub" data-act="cpu" data-lv="normal">🤖 컴퓨터랑 · 보통</button><button class="sub" data-act="cpu" data-lv="hard">🤖 컴퓨터랑 · 어려움</button><button class="sub" data-act="online">🌐 온라인 대전${on.w || on.l ? ` · ${on.w || 0}승 ${on.l || 0}패` : ''}</button></div>`);
 }
 
 // ---------- 온라인: 연결 ----------
