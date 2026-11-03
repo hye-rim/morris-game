@@ -47,6 +47,7 @@ function tone(freq, dur, type = 'sine', vol = 0.09, slide = 0) {
 }
 const seq = (notes, step, type = 'triangle', vol = 0.09) => notes.forEach((f, i) => setTimeout(() => tone(f, step * 0.0009, type, vol), i * step));
 const sfx = {
+  undo: () => tone(500, 0.08, 'sine', 0.08, -200),
   place: () => tone(330, 0.07, 'square', 0.07, -80),
   move: () => tone(260, 0.07, 'triangle', 0.08, 40),
   remove: () => seq([300, 200], 80, 'square', 0.07),
@@ -69,6 +70,7 @@ let st = null;                      // 컴퓨터 대전 판
 let cpuYou = 0;                     // 컴퓨터 대전에서 내 자리 (0 노랑·먼저, 1 분홍). 다시 하면 서로 바뀐다
 let room = null, netDown = false, waitingNet = false, turnEnd = 0, recorded = '', seenMove = 0;
 let cpuTimer = 0, overTimer = 0, thinking = false, bannerTimer = 0, millTimer = 0;
+let hist = [];                      // 컴퓨터 대전: 내가 한 동작 직전의 판들 (무르기용). 말 놓기·이동·잡기가 각각 한 동작
 let sel = -1;                       // 옮기려고 고른 내 말의 점 번호
 let lastMark = null;                // 방금 둔 수 { from, to, at }
 let millHL = null;                  // 방금 만든 밀의 세 점
@@ -155,6 +157,8 @@ function renderHud(m = model()) {
     else text = online() ? `${m.names[m.v.turn]} 차례 · ${sec}초` : '컴퓨터 차례…';
   }
   $('turn').textContent = text;
+  $('undoBtn').style.display = !online() && phase === 'play' && st ? '' : 'none';
+  $('undoBtn').disabled = !hist.length;
   $('resignBtn').style.display = online() && room && room.state === 'playing' ? '' : 'none';
 }
 function say(t) { $('msg').textContent = t; }
@@ -216,15 +220,18 @@ $('bsvg').addEventListener('pointerdown', (e) => {
   if (v.board[i] === m.you + 1) { sfx.bad(); say('이 말은 지금 움직일 수 없어요 (이웃한 빈 점이 없어요)'); }
   else if (sel >= 0) { sel = -1; render(); }
 });
-addEventListener('keydown', (e) => { if (e.code === 'KeyM') toggleMute(); if (e.code === 'Escape') { sel = -1; render(); } });
+$('undoBtn').onclick = (e) => { e.currentTarget.blur(); undo(); };
+addEventListener('keydown', (e) => { if (e.code === 'KeyZ' && e.target.tagName !== 'INPUT') undo(); if (e.code === 'KeyM') toggleMute(); if (e.code === 'Escape') { sel = -1; render(); } });
 
 // 내 동작 하나를 낸다 (컴퓨터 판은 바로 적용, 온라인은 서버로)
 function dispatch(a) {
   const m = model();
   if (!canAct(m)) return;
   if (online()) { waitingNet = true; net.send('act', { action: a }); render(); return; }
+  const before = { st: JSON.parse(JSON.stringify(st)), lastMark };
   const ev = L.apply(st, a);
   if (!ev) return;
+  hist.push(before);
   afterMove(ev, true);
 }
 function signalMine(ev) {
@@ -248,10 +255,20 @@ function afterMove(ev, mine) {
 function startCpu(level, you = 0) {
   leaveOnline();
   clearTimeout(cpuTimer); clearTimeout(overTimer);
-  mode = level; cpuYou = you; st = L.newGame(); phase = 'play'; thinking = false; turnEnd = 0; sel = -1; lastMark = null; millHL = null;
+  mode = level; cpuYou = you; st = L.newGame(); hist = []; phase = 'play'; thinking = false; turnEnd = 0; sel = -1; lastMark = null; millHL = null;
   hideOverlay(); drawBoard(); render();
   say(`내 말은 ${SIDE_NAME[you]}색이에요. 말을 아홉 개씩 번갈아 놓아요\n${you === 0 ? '내가 먼저 놓아요' : '컴퓨터가 먼저 놓아요'} · 세 점을 한 줄로 만들면 상대 말을 뺏어요`);
   if (you === 1) scheduleCpu();
+}
+// 무르기: 컴퓨터가 응수한 것까지 포함해 내가 한 동작 직전으로 돌아간다 (컴퓨터 대전에서만, 판이 끝나기 전까지)
+function undo() {
+  if (online() || phase !== 'play' || !st || !hist.length) return;
+  clearTimeout(cpuTimer); clearTimeout(overTimer); clearTimeout(millTimer); thinking = false;
+  const h = hist.pop();
+  st = h.st; lastMark = h.lastMark; sel = -1; millHL = null;
+  sfx.undo();
+  render();
+  say('한 동작 물렀어요. 다시 두세요');
 }
 function scheduleCpu() { thinking = true; render(); cpuTimer = setTimeout(cpuTurn, T.cpu); }
 function cpuTurn() {
@@ -521,6 +538,6 @@ if (loadSession()) {
 else showTitle();
 
 /* @test-hooks:start */
-window.__mr = { get st() { return st; }, get mode() { return mode; }, get phase() { return phase; }, get room() { return room; }, get sel() { return sel; }, get thinking() { return thinking; }, T, dispatch, startCpu, render, model, L };
+window.__mr = { get st() { return st; }, get mode() { return mode; }, get phase() { return phase; }, get room() { return room; }, get sel() { return sel; }, get thinking() { return thinking; }, T, dispatch, startCpu, render, model, L , undo, hist: () => hist, dispatch, showTitle};
 /* @test-hooks:end */
 })();
